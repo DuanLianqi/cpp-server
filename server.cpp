@@ -1,67 +1,39 @@
 #include <iostream>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <arpa/inet.h>
 #include <cstring>
 #include <unistd.h>
 #include <fcntl.h>
 #include "util.h"
+#include "InetAddress.h"
+#include "Socket.h"
+#include "Epoll.h"
 
-#define MAX_EVENTS    1024
-#define READ_BUFFER    1024
-
-void setnonblocking(int fd) {
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-}
+#define READ_BUFFER 1024
 
 int main() {
-    int servSockfd = socket(AF_INET, SOCK_STREAM, 0);
-    errif(servSockfd == - 1, "socket create error!");
+    Socket *servSocket = new Socket();
+    InetAddress *servAddr = new InetAddress("127.0.0.1", 12345);
+    servSocket->bind(servAddr);
+    servSocket->listen();
+    servSocket->setnonblocking();
 
-    struct sockaddr_in servAddr;
-    bzero(&servAddr, sizeof(servAddr));
-    servAddr.sin_family = AF_INET;
-    servAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servAddr.sin_port = htons(12345);
-
-    int ret = bind(servSockfd, (sockaddr *)&servAddr, sizeof(servAddr));
-    errif(ret == -1, "socket bind error!");
-
-    ret = listen(servSockfd, SOMAXCONN);
-    errif(ret == -1, "socket listen error!");
-
-    int epfd = epoll_create1(0);
-    errif(epfd == -1, "epoll create error!");
-
-    struct epoll_event events[MAX_EVENTS], ev;
-    bzero(events, sizeof(events));
-    bzero(&ev, sizeof(ev));
-    ev.data.fd = servSockfd;
-    ev.events = EPOLLIN | EPOLLET;
-    setnonblocking(servSockfd);
-    epoll_ctl(epfd, EPOLL_CTL_ADD, servSockfd, &ev);
+    Epoll *ep = new Epoll();
+    ep->addFd(servSocket->getFd(), EPOLLIN | EPOLLET);
 
     while(true) {
-        int nfds = epoll_wait(epfd, events, MAX_EVENTS, -1);
-        errif(nfds == -1, "epoll wait error!");
+        std::vector<epoll_event> events = ep->poll();
+        int nfds = events.size();
 
         for(int i = 0; i < nfds; i++) {
-            if(events[i].data.fd == servSockfd) {
-                struct sockaddr_in clientAddr;
-                socklen_t clientAddrLen = sizeof(clientAddr);
-                bzero(&clientAddr, clientAddrLen);
+            if(events[i].data.fd == servSocket->getFd()) {
+                InetAddress *clientAddr = new InetAddress();
+                int clientSockfd = servSocket->accept(clientAddr);
+                Socket *clientSock = new Socket(clientSockfd);
 
-                int clientSockfd = accept(servSockfd, (sockaddr *)&clientAddr, &clientAddrLen);
-                errif(clientSockfd == -1, "socket accept error!");
+                std::cout << "New client fd : " << clientSockfd << ", IP : " << inet_ntoa(clientAddr->addr.sin_addr)
+                        << ", Port : " << ntohs(clientAddr->addr.sin_port) << ".\n";
 
-                std::cout << "New client fd : " << clientSockfd << ", IP : " << inet_ntoa(clientAddr.sin_addr)
-                        << ", Port : " << ntohs(clientAddr.sin_port) << ".\n";
-
-                bzero(&ev, sizeof(ev));
-                ev.data.fd = clientSockfd;
-                ev.events = EPOLLIN | EPOLLET;
-                setnonblocking(clientSockfd);
-                epoll_ctl(epfd, EPOLL_CTL_ADD, clientSockfd, &ev);
+                clientSock->setnonblocking();
+                ep->addFd(clientSockfd, EPOLLIN | EPOLLET);
             } else if(events[i].events & EPOLLIN) {
                 char buf[READ_BUFFER] = {0};
                 while(true) {
@@ -88,6 +60,7 @@ int main() {
         }
     }
 
-    close(servSockfd);
+    delete servSocket;
+    delete ep;
     return 0;
 }

@@ -1,38 +1,30 @@
 #include <iostream>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <cstring>
 #include <unistd.h>
 #include "util.h"
+#include "InetAddress.h"
+#include "Socket.h"
 
-#define MAX_BUFFER    102
+#define MAX_BUFFER    1024
 
 int main() {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    errif(sockfd == - 1, "socket create error!");
-
-    struct sockaddr_in servAddr;
-    bzero(&servAddr, sizeof(servAddr));
-    servAddr.sin_family = AF_INET;
-    servAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servAddr.sin_port = htons(12345);
-
-    int ret = connect(sockfd, (sockaddr *)&servAddr, sizeof(servAddr));
-    errif(ret == -1, "socket connect error!");
+    Socket *clientSock = new Socket();
+    InetAddress *servAddr = new InetAddress("127.0.0.1", 12345);
+    clientSock->connect(servAddr);
 
     while(true) {
         char buf[MAX_BUFFER] = {0};
         std::cin >> buf;
-        ssize_t writeBytes = write(sockfd, buf, sizeof(buf));
+        ssize_t writeBytes = write(clientSock->getFd(), buf, sizeof(buf));
         if(writeBytes == -1) {
             std::cout << "Server has already disconnected, can't write any more." << std::endl;
             break;
         }
 
         bzero(buf, sizeof(buf));
-        ssize_t readBytes = read(sockfd, buf, sizeof(buf));
+        ssize_t readBytes = read(clientSock->getFd(), buf, sizeof(buf));
         if(readBytes > 0) {
-            std::cout << "There has a message from server : " << sockfd << ", context is : " << buf << std::endl;
+            std::cout << "There has a message from server, context is : " << buf << std::endl;
         } else if(readBytes == 0) {
             std::cout << "Server has already disconnected." << std::endl;
             break;
@@ -42,6 +34,7 @@ int main() {
         }
     }
 
-    close(sockfd);
+    delete clientSock;
+    delete servAddr;
     return 0;
 }
