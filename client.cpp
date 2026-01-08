@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include "util.h"
 
+#define MAX_BUFFER    102
+
 int main() {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     errif(sockfd == - 1, "socket create error!");
@@ -19,7 +21,7 @@ int main() {
     errif(ret == -1, "socket connect error!");
 
     while(true) {
-        char buf[1024] = {0};
+        char buf[MAX_BUFFER] = {0};
         std::cin >> buf;
         ssize_t writeBytes = write(sockfd, buf, sizeof(buf));
         if(writeBytes == -1) {
