@@ -6,6 +6,7 @@
 #include "InetAddress.h"
 #include "Socket.h"
 #include "Epoll.h"
+#include "Channel.h"
 
 #define READ_BUFFER 1024
 
@@ -17,14 +18,16 @@ int main() {
     servSocket->setnonblocking();
 
     Epoll *ep = new Epoll();
-    ep->addFd(servSocket->getFd(), EPOLLIN | EPOLLET);
+    Channel *servChannel = new Channel(ep, servSocket->getFd());
+    servChannel->enableReading();
 
     while(true) {
-        std::vector<epoll_event> events = ep->poll();
-        int nfds = events.size();
+        std::vector<Channel *> activeChannels = ep->poll();
+        int nfds = activeChannels.size();
 
         for(int i = 0; i < nfds; i++) {
-            if(events[i].data.fd == servSocket->getFd()) {
+            int chfd = activeChannels[i]->getFd();
+            if(chfd == servSocket->getFd()) {
                 InetAddress *clientAddr = new InetAddress();
                 int clientSockfd = servSocket->accept(clientAddr);
                 Socket *clientSock = new Socket(clientSockfd);
@@ -33,15 +36,16 @@ int main() {
                         << ", Port : " << ntohs(clientAddr->addr.sin_port) << ".\n";
 
                 clientSock->setnonblocking();
-                ep->addFd(clientSockfd, EPOLLIN | EPOLLET);
-            } else if(events[i].events & EPOLLIN) {
+                Channel *clientChannel = new Channel(ep, clientSockfd);
+                clientChannel->enableReading();
+            } else if(activeChannels[i]->getRevents() & EPOLLIN) {
                 char buf[READ_BUFFER] = {0};
                 while(true) {
                     bzero(buf, READ_BUFFER);
-                    ssize_t readBytes = read(events[i].data.fd, buf, READ_BUFFER);
+                    ssize_t readBytes = read(chfd, buf, READ_BUFFER);
                     if(readBytes > 0) {
-                        std::cout << "There has a message from client : " << events[i].data.fd << ", context is : " << buf << std::endl;
-                        write(events[i].data.fd, buf, sizeof(buf));
+                        std::cout << "There has a message from client : " << chfd << ", context is : " << buf << std::endl;
+                        write(chfd, buf, sizeof(buf));
                     } else if(readBytes == -1 && errno == EINTR) {
                         std::cout << "Continue reading." << std::endl;
                         continue;;
@@ -49,8 +53,8 @@ int main() {
                         std::cout << "Finish reading once, errno is : " << errno << std::endl;
                         break;
                     } else if(readBytes == 0) {
-                        std::cout << "EOF! client fd : " << events[i].data.fd << " disconnected!" << std::endl;
-                        close(events[i].data.fd);
+                        std::cout << "EOF! client fd : " << chfd << " disconnected!" << std::endl;
+                        close(chfd);
                         break;
                     }
                 }
@@ -61,6 +65,8 @@ int main() {
     }
 
     delete servSocket;
+    delete servAddr;
     delete ep;
+    delete servChannel;
     return 0;
 }
