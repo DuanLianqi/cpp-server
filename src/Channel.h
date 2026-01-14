@@ -29,7 +29,7 @@ private:
     uint32_t events;    //希望监听这个文件描述符的哪些事件
     uint32_t revents;   //在epoll返回该Channel时文件描述符正在发生的事件
     bool inEpoll;
-    std::function<void()> callback;
+    std::function<void()> callback;    //对于服务器来说callback是指接受新连接和可读事件
 };
 
 #endif
