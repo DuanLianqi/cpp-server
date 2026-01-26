@@ -9,10 +9,11 @@ public:
     ~Buffer();
 
     void append(const char *_str, int size);
-    ssize_t size();
+    size_t size();
     const char *c_str();
     void clear();
     void getline();
+    void setBuf(const char* str);
 private:
     std::string buf;
 };

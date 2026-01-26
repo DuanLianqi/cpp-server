@@ -10,9 +10,9 @@ public:
     Epoll();
     ~Epoll();
 
-    void addFd(int fd, uint32_t op);
     void updateChannel(Channel *ch);
-    std::vector<Channel *> poll(int timeout = -1);
+    void deleteChannel(Channel *ch);
+    std::vector<Channel*> poll(int timeout = -1);
 
 private:
     int epfd;

@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstring>
 #include "Socket.h"
 #include "InetAddress.h"
 #include "util.h"
@@ -22,7 +23,8 @@ Socket::~Socket() {
 }
 
 void Socket::bind(InetAddress *addr) {
-    int ret = ::bind(fd, (sockaddr *)&(addr->addr), addr->addrLen);
+    struct sockaddr_in sockAddr = addr->getAddr();
+    int ret = ::bind(fd, (sockaddr *)&(sockAddr), sizeof(sockAddr));
     errif(ret == -1, "socket bind error!");
 }
 
@@ -36,13 +38,18 @@ void Socket::setnonblocking() {
 }
 
 int Socket::accept(InetAddress *addr) {
-    int clientSockfd = ::accept(fd, (sockaddr *)&(addr->addr), &(addr->addrLen));
+    struct sockaddr_in sockAddr;
+    socklen_t addrLen = sizeof(sockAddr);
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    int clientSockfd = ::accept(fd, (sockaddr *)&(sockAddr), &addrLen);
     errif(clientSockfd == -1, "socket accept error!");
+    addr->setInetAddr(sockAddr);
     return clientSockfd;
 }
 
 void Socket::connect(InetAddress *addr) {
-    int ret = ::connect(fd, (sockaddr *)&(addr->addr), addr->addrLen);
+    struct sockaddr_in sockAddr = addr->getAddr();
+    int ret = ::connect(fd, (sockaddr *)&(sockAddr), sizeof(sockAddr));
     errif(ret == -1, "socket connect error!");
 }
 

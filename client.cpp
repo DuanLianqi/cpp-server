@@ -27,7 +27,7 @@ int main() {
         ssize_t alreadyReadBytes = 0;
         char buf[MAX_BUFFER] = {0};
         while(true) {
-            bzero(buf, MAX_BUFFER);
+            memset(buf, 0, MAX_BUFFER);
 
             ssize_t readBytes = read(clientSock->getFd(), buf, MAX_BUFFER);
             if(readBytes > 0) {

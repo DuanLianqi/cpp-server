@@ -18,7 +18,7 @@ void Buffer::append(const char *_str, int size) {
     }
 }
 
-ssize_t Buffer::size() {
+size_t Buffer::size() {
     return buf.size();
 }
 
@@ -33,4 +33,9 @@ void Buffer::clear() {
 void Buffer::getline() {
     buf.clear();
     std::getline(std::cin, buf);
+}
+
+void Buffer::setBuf(const char* str) {
+    buf.clear();
+    buf.append(str);
 }

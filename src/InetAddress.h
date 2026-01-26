@@ -9,8 +9,12 @@ public:
     InetAddress(const char *ip, uint16_t port);
     ~InetAddress();
 
+    void setInetAddr(sockaddr_in addr);
+    sockaddr_in getAddr() const;
+    socklen_t getAddrLen() const;
+
+private:
     struct sockaddr_in addr;
-    socklen_t addrLen;
 };
 
 #endif

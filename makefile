@@ -1,6 +1,16 @@
+servsrc = $(wildcard src/*.cpp)
+
 server:
-	g++ src/util.cpp src/InetAddress.cpp src/Socket.cpp src/Epoll.cpp src/Channel.cpp src/Buffer.cpp \
-	src/EventLoop.cpp src/Server.cpp src/Acceptor.cpp src/Connection.cpp server.cpp -o server && \
-	g++ src/util.cpp src/InetAddress.cpp src/Socket.cpp src/Buffer.cpp client.cpp -o client
+	g++ -std=c++20 -pthread -g $(servsrc) server.cpp -o server
+
+client:
+	g++ -std=c++20 src/util.cpp src/Buffer.cpp src/Socket.cpp src/InetAddress.cpp client.cpp -o client
+
+th:
+	g++ -pthread src/ThreadPool.cpp ThreadPoolTest.cpp -o ThreadPoolTest
+
+test:
+	g++ src/util.cpp src/Buffer.cpp src/Socket.cpp src/InetAddress.cpp src/ThreadPool.cpp -pthread test.cpp -o test
+
 clean:
-	rm server && rm client
+	rm server && rm client && rm test && rm ThreadPoolTest

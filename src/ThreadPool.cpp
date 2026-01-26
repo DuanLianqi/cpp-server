@@ -27,25 +27,12 @@ ThreadPool::ThreadPool(int size) : stop(false) {
 ThreadPool::~ThreadPool() {
     {
         std::unique_lock<std::mutex> lock(tasksMtx);
-        //std::cout << "走到这里" << std::endl;
-        stop = false;
+        stop = true;
     }
     cond.notify_all();
     for(auto& thread : threads) {
         if(thread.joinable()) {
             thread.join();
-            std::cout << "走到这里" << std::endl;
         }
     }
-}
-
-void ThreadPool::add(std::function<void()> task) {
-    {
-        std::unique_lock<std::mutex> lock(tasksMtx);
-        if(stop) {
-            throw std::runtime_error("ThreadPool already stop, can't add task any more!");
-        }
-        tasks.emplace(task);
-    }
-    cond.notify_all();
 }

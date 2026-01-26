@@ -12,24 +12,29 @@ public:
     ~Channel();
 
     void handleEvent();
-    void enableReading();
+    void enableRead();
 
     int getFd() const;
     uint32_t getEvents() const;
-    uint32_t getRevents() const;
+    uint32_t getReady() const;
     bool getInEpoll() const;
-    void setInEpoll();
+    void setInEpoll(bool _in = true);
     void setEvents(uint32_t _events);
-    void setRevents(uint32_t _revents);
-    void setCallback(std::function<void()> cb);
+    void setReady(uint32_t _ready);
+    void setReadCallback(std::function<void()> cb);
+    void setWriteCallback(std::function<void()> cb);
+    void useET();
+    void setUseThreadPool(bool use = true);
 
 private:
     EventLoop *loop;
     int fd;
     uint32_t events;    //希望监听这个文件描述符的哪些事件
-    uint32_t revents;   //在epoll返回该Channel时文件描述符正在发生的事件
+    uint32_t ready;
+    bool useThreadPool;
     bool inEpoll;
-    std::function<void()> callback;    //对于服务器来说callback是指接受新连接和可读事件
+    std::function<void()> readCallback;
+    std::function<void()> writeCallback;
 };
 
 #endif

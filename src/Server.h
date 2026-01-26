@@ -12,13 +12,14 @@ class Server {
 public:
     Server(EventLoop *_loop);
     ~Server();
+
     void newConnection(Socket *servSocket);
-    void deleteConnection(Socket *servSocket);
+    void deleteConnection(int sockfd);
 
 private:
     EventLoop *loop;
     Acceptor *acceptor;
-    std::map<int, Connection *> connections;
+    std::map<int, Connection*> connections;
 };
 
 #endif
